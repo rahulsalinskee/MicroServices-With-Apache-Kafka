@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Product.API/Product.API.csproj" />
+  <Project Path="Shared/Shared.csproj" />
+</Solution>
