@@ -12,6 +12,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    /* Swagger UI for Product API is loaded here */
+    app.UseSwaggerUI(option =>
+    {
+        option.SwaggerEndpoint(url: "/openapi/v1.json", name: "Product API");
+    });
 }
 
 app.UseHttpsRedirection();
