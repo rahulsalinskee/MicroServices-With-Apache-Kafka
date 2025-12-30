@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Order.API/Order.API.csproj" />
   <Project Path="Product.API/Product.API.csproj" />
   <Project Path="Shared/Shared.csproj" />
 </Solution>
