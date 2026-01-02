@@ -33,8 +33,8 @@ namespace Product.API.Controllers
             return BadRequest(response);
         }
 
-        [HttpGet("{id}", Name = "GetProduct")]
-        public async Task<IActionResult> GetProductById([FromRoute] int id)
+        [HttpGet("{id:int}", Name = "GetProduct")]
+        public async Task<IActionResult> GetProductById(int id)
         {
             var response = await this._productService.GetProductByIdAsync(productId: id);
 
@@ -62,9 +62,22 @@ namespace Product.API.Controllers
 
         [HttpPut]
         [ModelValidation]
-        public async Task<IActionResult> UpdateProduct([FromBody] UpdateProductDto updateProductDto)
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] UpdateProductDto updateProductDto)
         {
-            var response = await this._productService.UpdateProductAsync(updatedProductDto: updateProductDto);
+            var response = await this._productService.UpdateProductByIdAsync(productId: id, updatedProductDto: updateProductDto);
+
+            if (response.IsSuccess)
+            {
+                return Ok(response);
+            }
+
+            return BadRequest(response);
+        }
+
+        [HttpDelete("{id:int}", Name = "DeleteProduct")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var response = await this._productService.DeleteProductAsync(productId: id);
 
             if (response.IsSuccess)
             {

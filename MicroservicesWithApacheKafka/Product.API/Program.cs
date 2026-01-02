@@ -3,46 +3,70 @@ using ApplicationDataContext.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Product.API.ProductRepository;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var productLogger = new LoggerConfiguration().WriteTo.File(path: "MicroservicesWithApacheKafka/Application.Logger/Logs/ProductLog.ProductLog.txt", rollingInterval: RollingInterval.Day).MinimumLevel.Information().CreateLogger();
-builder.Logging.ClearProviders();
-builder.Logging.AddSerilog(logger: productLogger);
+// Resolve the correct log path relative to solution root
+var solutionRoot = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
+var logDirectory = Path.Combine(solutionRoot, "Application.Logger", "Logs", "ProductLog");
+Directory.CreateDirectory(logDirectory);
+var logPath = Path.Combine(logDirectory, "ProductLog-.txt");
 
-builder.Services.AddDbContext<ProductDbContext>(option =>
+var productLogger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("ApplicationName", "Product.API")
+    .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: logPath,
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{ApplicationName}] {Message:lj}{NewLine}{Exception} \n",
+        retainedFileCountLimit: 7)
+    .CreateLogger();
+
+Log.Logger = productLogger;
+
+try
 {
-    option.UseSqlServer(builder.Configuration.GetConnectionString(name: "ProductDbConnectionString"));
-});
+    builder.Logging.ClearProviders();
+    builder.Logging.AddSerilog(logger: productLogger);
 
-builder.Services.AddScoped<IProductService, ProductImplementation>();
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-
-    /* Swagger UI for Product API is loaded here */
-    app.UseSwaggerUI(option =>
+    builder.Services.AddDbContext<ProductDbContext>(option =>
     {
-        option.SwaggerEndpoint(url: "/openapi/v1.json", name: "Product API");
+        option.UseSqlServer(builder.Configuration.GetConnectionString(name: "ProductDbConnectionString"));
     });
+
+    builder.Services.AddScoped<IProductService, ProductImplementation>();
+
+    builder.Services.AddControllers();
+    builder.Services.AddOpenApi();
+
+    var app = builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+        app.UseSwaggerUI(option =>
+        {
+            option.SwaggerEndpoint(url: "/openapi/v1.json", name: "Product API");
+        });
+    }
+
+    app.UseMiddleware<GlobalExceptionHandler>();
+    app.UseHttpsRedirection();
+    app.UseAuthorization();
+    app.MapControllers();
+
+    app.Run();
 }
-
-app.UseMiddleware<GlobalExceptionHandler>();
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+catch (System.Exception exception)
+{
+    Log.Fatal(exception, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

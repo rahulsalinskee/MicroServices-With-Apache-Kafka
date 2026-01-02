@@ -162,7 +162,7 @@ namespace Product.API.ProductRepository
             };
         }
 
-        public async Task<ResponseDto> UpdateProductAsync(UpdateProductDto updatedProductDto)
+        public async Task<ResponseDto> UpdateProductByIdAsync(int productId, UpdateProductDto updatedProductDto)
         {
             if (updatedProductDto is null)
             {
@@ -174,26 +174,44 @@ namespace Product.API.ProductRepository
                 };
             }
 
-            var existingProduct = await this._productDbContext.Products.FirstOrDefaultAsync(product => product.Name == updatedProductDto.Name && product.Price == updatedProductDto.Price);
-
-            if (existingProduct is not null)
+            if (productId <= 0)
             {
                 return new ResponseDto()
                 {
                     Result = null,
                     IsSuccess = false,
-                    Message = "Product is already existing"
+                    Message = "Invalid Product Id"
                 };
             }
 
-            //var updatedProduct = updatedProductDto.ConvertProductDtoToProductExtension();
+            var fetchedProduct = await this._productDbContext.Products.FirstOrDefaultAsync(product => product.Id == productId);
 
-            existingProduct?.Name = updatedProductDto.Name;
-            existingProduct?.Price = updatedProductDto.Price;
+            if (fetchedProduct is null)
+            {
+                return new ResponseDto()
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = "Product not found"
+                };
+            }
+
+            if (fetchedProduct.Name == updatedProductDto.Name && fetchedProduct.Price == updatedProductDto.Price)
+            {
+                return new ResponseDto()
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = "Product is not updated!"
+                };
+            }
+
+            fetchedProduct?.Name = updatedProductDto.Name;
+            fetchedProduct?.Price = updatedProductDto.Price;
 
             await this._productDbContext.SaveChangesAsync();
 
-            var updatedProductAddedToDatabaseDto = existingProduct?.ConvertProductToProductDtoExtension();
+            var updatedProductAddedToDatabaseDto = fetchedProduct?.ConvertProductToProductDtoExtension();
 
             return new ResponseDto()
             {

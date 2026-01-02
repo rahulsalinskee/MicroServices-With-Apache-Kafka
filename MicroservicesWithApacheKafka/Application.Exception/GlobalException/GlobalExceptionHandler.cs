@@ -32,7 +32,10 @@ namespace Application.Exception.GlobalException
                     When = DateTime.Now,
                     Message = exception.Message,
                 };
-                _logger.LogError(exception: exception, message: "Application Error", args: applicationError);
+                _logger.LogError(exception, "Application Error occurred with Id: {ErrorId}", applicationError.Id);
+
+                httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                httpContext.Response.ContentType = "application/json";
 
                 await httpContext.Response.WriteAsJsonAsync(applicationError);
             }

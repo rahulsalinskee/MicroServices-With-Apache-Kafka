@@ -11,7 +11,7 @@ namespace Product.API.ProductRepository
 
         public Task<ResponseDto> CreateProductAsync(CreateProductDto newProductDto);
 
-        public Task<ResponseDto> UpdateProductAsync(UpdateProductDto updatedProductDto);
+        public Task<ResponseDto> UpdateProductByIdAsync(int productId, UpdateProductDto updatedProductDto);
 
         public Task<ResponseDto> DeleteProductAsync(int productId);
     }
