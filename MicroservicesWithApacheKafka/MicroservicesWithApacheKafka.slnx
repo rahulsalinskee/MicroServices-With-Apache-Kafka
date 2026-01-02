@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="Application.Exception/Application.Exception.csproj" Id="b25a96fc-cdd8-440c-92eb-1246c53b3b8f" />
+  <Project Path="Application.Logger/Application.Logger.csproj" Id="d8497029-019d-48a7-a5d7-14faac90d04b" />
+  <Project Path="ApplicationDataContext/ApplicationDataContext.csproj" Id="5cdeff7f-d052-496b-98ae-3b66b020c9e4" />
   <Project Path="Order.API/Order.API.csproj" />
   <Project Path="Product.API/Product.API.csproj" />
   <Project Path="Shared/Shared.csproj" />
