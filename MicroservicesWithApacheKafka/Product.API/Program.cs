@@ -4,11 +4,10 @@ using ApplicationDataContext.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Product.API.ProductRepository;
 using Serilog;
-using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var productLogger = LogConfiguration.CreateProductLogger();
+var productLogger = LogConfiguration.GenetateProductLog();
 
 Log.Logger = productLogger;
 

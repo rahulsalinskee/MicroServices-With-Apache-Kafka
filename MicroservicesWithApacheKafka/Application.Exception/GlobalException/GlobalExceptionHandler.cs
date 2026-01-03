@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Application.Exception.GlobalException
 {
@@ -33,6 +30,8 @@ namespace Application.Exception.GlobalException
                     Message = exception.Message,
                 };
                 _logger.LogError(exception, "Application Error occurred with Id: {ErrorId}", applicationError.Id);
+                _logger.LogError(exception, "Application Error occurred on Date & Time: {ErrorDate}", applicationError.When);
+                _logger.LogError(exception, "Application Error occurred with Message: {ErrorMessage}", applicationError.Message);
 
                 httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 httpContext.Response.ContentType = "application/json";
