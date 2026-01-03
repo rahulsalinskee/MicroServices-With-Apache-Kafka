@@ -1,4 +1,5 @@
 using Application.Exception.GlobalException;
+using Application.Logger.Logger;
 using ApplicationDataContext.DataBaseContext;
 using Microsoft.EntityFrameworkCore;
 using Product.API.ProductRepository;
@@ -7,25 +8,7 @@ using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Resolve the correct log path relative to solution root
-var solutionRoot = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..");
-var logDirectory = Path.Combine(solutionRoot, "Application.Logger", "Logs", "ProductLog");
-Directory.CreateDirectory(logDirectory);
-var logPath = Path.Combine(logDirectory, "ProductLog-.txt");
-
-var productLogger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "Product.API")
-    .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File(
-        path: logPath,
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{ApplicationName}] {Message:lj}{NewLine}{Exception} \n",
-        retainedFileCountLimit: 7)
-    .CreateLogger();
+var productLogger = LogConfiguration.CreateProductLogger();
 
 Log.Logger = productLogger;
 
