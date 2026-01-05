@@ -1,6 +1,7 @@
 using Application.Exception.GlobalException;
 using Application.Logger.Logger;
 using ApplicationDataContext.DataBaseContext;
+using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Product.API.ProductRepository;
 using Serilog;
@@ -20,6 +21,15 @@ try
     {
         option.UseSqlServer(builder.Configuration.GetConnectionString(name: "ProductDbConnectionString"));
     });
+
+    /* Configure the producer */
+    var producerConfiguration = new ProducerConfig()
+    {
+        BootstrapServers = "localhost:9092",
+    };
+
+    /* Register the producer's configuration */
+    builder.Services.AddSingleton<IProducer<Null, string>>(producer => new ProducerBuilder<Null, string>(config: producerConfiguration).Build());
 
     builder.Services.AddScoped<IProductService, ProductImplementation>();
 

@@ -1,18 +1,23 @@
 ﻿using ApplicationDataContext.DataBaseContext;
+using Azure.Core.Serialization;
+using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Product.API.DTOs.ResponseDTOs;
 using Shared.DTOs.ProductDtos;
 using Shared.Mapper;
+using System.Text.Json;
 
 namespace Product.API.ProductRepository
 {
     public class ProductImplementation : IProductService
     {
         private readonly ProductDbContext _productDbContext;
+        private readonly IProducer<Null, string> _producer;
 
-        public ProductImplementation(ProductDbContext productDbContext)
+        public ProductImplementation(ProductDbContext productDbContext, IProducer<Null, string> producer)
         {
             this._productDbContext = productDbContext;
+            this._producer = producer;
         }
 
         public async Task<ResponseDto> CreateProductAsync(CreateProductDto newProductDto)
@@ -37,7 +42,7 @@ namespace Product.API.ProductRepository
             var newProduct = productDto.ConvertProductDtoToProductExtension();
 
             /* Check if the new product is already existing in the database */
-            var existingProduct = await this._productDbContext.Products.FirstOrDefaultAsync(product => product.Name == newProduct.Name);
+            var existingProduct = await this._productDbContext.Products.FirstOrDefaultAsync(product => product.Name == newProduct.Name && product.Price == newProduct.Price);
 
             if (existingProduct is not null)
             {
@@ -46,6 +51,22 @@ namespace Product.API.ProductRepository
                     Result = null,
                     IsSuccess = false,
                     Message = "Product already exists"
+                };
+            }
+
+            /* Send the new product to the kafka topic */
+            var deliveryResult = await this._producer.ProduceAsync(topic: "Add-Product-Topic", message: new Message<Null, string>()
+            {
+                Value = JsonSerializer.Serialize(newProduct)
+            });
+
+            if (deliveryResult.Status is PersistenceStatus.NotPersisted)
+            {
+                return new ResponseDto()
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = "Product is not added!"
                 };
             }
 
@@ -89,6 +110,14 @@ namespace Product.API.ProductRepository
             this._productDbContext.Remove(product);
             await this._productDbContext.SaveChangesAsync();
 
+            /* Publish product deletion event to Kafka for audit/logging */
+            await PublishProductEventAsync(topic: "Delete-Product-Topic", message: new
+            {
+                EventType = "ProductDeleted",
+                ProductId = productId,
+                Timestamp = DateTime.UtcNow
+            });
+
             return new ResponseDto()
             {
                 Result = null,
@@ -123,6 +152,14 @@ namespace Product.API.ProductRepository
 
             var productDto = product.ConvertProductToProductDtoExtension();
 
+            /* Publish product retrieval event to Kafka for audit/logging */
+            await PublishProductEventAsync(topic: "Get-Product-Topic", message: new
+            {
+                EventType = "ProductRetrieved",
+                ProductId = productId,
+                Timestamp = DateTime.UtcNow
+            });
+
             return new ResponseDto()
             {
                 Result = productDto,
@@ -153,6 +190,14 @@ namespace Product.API.ProductRepository
 
                 productsDto.Add(item: productDto);
             }
+
+            /* Publish all products retrieval event to Kafka for audit/logging */
+            await PublishProductEventAsync(topic: "Get-Products-Topic", message: new
+            {
+                EventType = "AllProductsRetrieved",
+                ProductCount = productsDto.Count,
+                Timestamp = DateTime.UtcNow
+            });
 
             return new ResponseDto()
             {
@@ -206,6 +251,22 @@ namespace Product.API.ProductRepository
                 };
             }
 
+            /* Send the updated product to the kafka topic */
+            var deliveryResult = await this._producer.ProduceAsync(topic: "Update-Product-Topic", message: new Message<Null, string>()
+            {
+                Value = JsonSerializer.Serialize(updatedProductDto)
+            });
+
+            if (deliveryResult.Status is PersistenceStatus.NotPersisted)
+            {
+                return new ResponseDto()
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = "Product is not updated!"
+                };
+            }
+
             fetchedProduct?.Name = updatedProductDto.Name;
             fetchedProduct?.Price = updatedProductDto.Price;
 
@@ -219,6 +280,22 @@ namespace Product.API.ProductRepository
                 IsSuccess = true,
                 Message = "Product is updated!"
             };
+        }
+
+        private async Task PublishProductEventAsync(string topic, object message)
+        {
+            try
+            {
+                await this._producer.ProduceAsync(topic: topic, message: new Message<Null, string>()
+                {
+                    Value = JsonSerializer.Serialize(message)
+                });
+            }
+            catch (Exception ex)
+            {
+                /* Log error but don't fail the request since read operations shouldn't be blocked by Kafka issues */
+                System.Diagnostics.Debug.WriteLine($"Failed to publish event to {topic}: {ex.Message}");
+            }
         }
     }
 }
