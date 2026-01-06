@@ -20,7 +20,7 @@ namespace Application.Logger.Logger
             return CreateLog(logPath: logFilePathForProductApi, projectName: _productProjectName);
         }
 
-        private static ILogger GenetateOrderLog()
+        public static ILogger GenetateOrderLog()
         {
             var logFilePathForProductApi = GetFilePath(logApiDirName: _orderApiDirLog, logFileName: _orderLogFileName);
 

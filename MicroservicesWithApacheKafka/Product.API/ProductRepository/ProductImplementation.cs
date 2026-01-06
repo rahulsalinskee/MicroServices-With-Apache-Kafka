@@ -11,6 +11,12 @@ namespace Product.API.ProductRepository
 {
     public class ProductImplementation : IProductService
     {
+        private const string ADD_PRODUCT_TOPIC = "Add-Product-Topic";
+        private const string GET_PRODUCT_TOPIC = "Get-Product-Topic";
+        private const string GET_PRODUCTS_TOPIC = "Get-Products-Topic";
+        private const string DELETE_PRODUCT_TOPIC = "Delete-Product-Topic";
+        private const string UPDATE_PRODUCT_TOPIC = "Update-Product-Topic";
+
         private readonly ProductDbContext _productDbContext;
         private readonly IProducer<Null, string> _producer;
 
@@ -55,7 +61,7 @@ namespace Product.API.ProductRepository
             }
 
             /* Send the new product to the kafka topic */
-            var deliveryResult = await this._producer.ProduceAsync(topic: "Add-Product-Topic", message: new Message<Null, string>()
+            var deliveryResult = await this._producer.ProduceAsync(topic: ADD_PRODUCT_TOPIC, message: new Message<Null, string>()
             {
                 Value = JsonSerializer.Serialize(newProduct)
             });
@@ -111,7 +117,7 @@ namespace Product.API.ProductRepository
             await this._productDbContext.SaveChangesAsync();
 
             /* Publish product deletion event to Kafka for audit/logging */
-            await PublishProductEventAsync(topic: "Delete-Product-Topic", message: new
+            await PublishProductEventAsync(topic: DELETE_PRODUCT_TOPIC, message: new
             {
                 EventType = "ProductDeleted",
                 ProductId = productId,
@@ -153,7 +159,7 @@ namespace Product.API.ProductRepository
             var productDto = product.ConvertProductToProductDtoExtension();
 
             /* Publish product retrieval event to Kafka for audit/logging */
-            await PublishProductEventAsync(topic: "Get-Product-Topic", message: new
+            await PublishProductEventAsync(topic: GET_PRODUCT_TOPIC, message: new
             {
                 EventType = "ProductRetrieved",
                 ProductId = productId,
@@ -192,7 +198,7 @@ namespace Product.API.ProductRepository
             }
 
             /* Publish all products retrieval event to Kafka for audit/logging */
-            await PublishProductEventAsync(topic: "Get-Products-Topic", message: new
+            await PublishProductEventAsync(topic: GET_PRODUCTS_TOPIC, message: new
             {
                 EventType = "AllProductsRetrieved",
                 ProductCount = productsDto.Count,
@@ -252,7 +258,7 @@ namespace Product.API.ProductRepository
             }
 
             /* Send the updated product to the kafka topic */
-            var deliveryResult = await this._producer.ProduceAsync(topic: "Update-Product-Topic", message: new Message<Null, string>()
+            var deliveryResult = await this._producer.ProduceAsync(topic: UPDATE_PRODUCT_TOPIC, message: new Message<Null, string>()
             {
                 Value = JsonSerializer.Serialize(updatedProductDto)
             });

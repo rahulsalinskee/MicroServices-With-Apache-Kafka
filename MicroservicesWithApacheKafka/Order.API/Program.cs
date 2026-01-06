@@ -1,29 +1,84 @@
+using Application.Exception.GlobalException;
+using Application.Logger.Logger;
+using ApplicationDataContext.DataBaseConfiguration;
+using ApplicationDataContext.DataBaseContext;
+using Confluent.Kafka;
+using Microsoft.EntityFrameworkCore;
+using Order.API.OrderRespository;
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+/* Load configuration from data layer embedded resource. 
+*  This forces the API to load the config file embedded inside your library 
+*/
+ApplicationDataBaseConfiguration.LoadConfiguration(builder: builder.Configuration);
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+/* Configure Serilog */
+var orderLogger = LogConfiguration.GenetateOrderLog();
+Log.Logger = orderLogger;
 
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.MapOpenApi();
+    builder.Logging.ClearProviders();
+    builder.Logging.AddSerilog(logger: orderLogger);
 
-    /* Swagger UI for Open API is loaded here */
-    app.UseSwaggerUI(option =>
+    /* Register order DbContext */
+    builder.Services.AddDbContext<OrderDbContext>(option =>
     {
-        option.SwaggerEndpoint(url: "/openapi/v1.json", name: "Order.API");
+        option.UseSqlServer(builder.Configuration.GetConnectionString(name: "OrderDbConnectionString"));
     });
+
+    /* Register the Product DbContext */
+    builder.Services.AddDbContext<ProductDbContext>(options =>
+    {
+        options.UseSqlServer(builder.Configuration.GetConnectionString(name: "ProductDbConnectionString"));
+    });
+
+    /* Configure Kafka Producer */
+    var kafkaConfig = new ProducerConfig
+    {
+        BootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092"
+    };
+    builder.Services.AddSingleton<IProducer<Null, string>>(sp => new ProducerBuilder<Null, string>(kafkaConfig).Build());
+
+    /* Configure Kafka Consumer */
+    var consumerConfig = new ConsumerConfig
+    {
+        BootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
+        GroupId = "order-consumer-group",
+        AutoOffsetReset = AutoOffsetReset.Earliest
+    };
+    builder.Services.AddSingleton<IConsumer<Null, string>>(sp => new ConsumerBuilder<Null, string>(consumerConfig).Build());
+
+    builder.Services.AddScoped<IOrderService, OrderImplementation>();
+    builder.Services.AddScoped<IOrderService, OrderImplementation>();
+    builder.Services.AddControllers();
+    builder.Services.AddOpenApi();
+
+    var app = builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+        app.UseSwaggerUI(option =>
+        {
+            option.SwaggerEndpoint(url: "/openapi/v1.json", name: "Order.API");
+        });
+    }
+
+    app.UseMiddleware<GlobalExceptionHandler>();
+    app.UseHttpsRedirection();
+    app.UseAuthorization();
+    app.MapControllers();
+
+    app.Run();
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+catch (System.Exception exception)
+{
+    Log.Fatal(exception, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

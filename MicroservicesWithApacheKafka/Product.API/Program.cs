@@ -1,5 +1,6 @@
 using Application.Exception.GlobalException;
 using Application.Logger.Logger;
+using ApplicationDataContext.DataBaseConfiguration;
 using ApplicationDataContext.DataBaseContext;
 using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,11 @@ using Product.API.ProductRepository;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+/* Load configuration from data layer embedded resource. 
+*  This forces the API to load the config file embedded inside your library 
+*/
+ApplicationDataBaseConfiguration.LoadConfiguration(builder: builder.Configuration);
 
 var productLogger = LogConfiguration.GenetateProductLog();
 
