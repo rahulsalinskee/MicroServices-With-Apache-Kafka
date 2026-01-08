@@ -8,7 +8,7 @@ namespace Shared.Mapper
 {
     public static class OrderMap
     {
-        public static OrderDto? ConvertOrderToOrderDto(this Order order)
+        public static OrderDto? ConvertOrderToOrderDtoExtension(this Order order)
         {
             if (order is null)
             {
@@ -22,7 +22,7 @@ namespace Shared.Mapper
             };
         }
 
-        public static Order? ConvertOrderDtoToOrder(this OrderDto orderDto)
+        public static Order? ConvertOrderDtoToOrderExtension(this OrderDto orderDto)
         {
             if (orderDto is null)
             {

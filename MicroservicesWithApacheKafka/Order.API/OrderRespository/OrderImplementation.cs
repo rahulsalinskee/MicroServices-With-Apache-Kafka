@@ -3,8 +3,10 @@ using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Product.API.DTOs.ResponseDTOs;
 using Shared.DTOs.OrderDtos;
+using Shared.DTOs.OrderSummaryDtos;
 using Shared.DTOs.ProductDtos;
 using Shared.Mapper;
+using Shared.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -21,12 +23,14 @@ namespace Order.API.OrderRespository
         private readonly IConsumer<Null, string> _consumer;
         private readonly OrderDbContext _orderDbContext;
         private readonly ProductDbContext _productDbContext;
+        private readonly OrderSummaryDbContext _orderSummaryDbContext;
 
-        public OrderImplementation(IConsumer<Null, string> consumer, OrderDbContext orderDbContext, ProductDbContext productDbContext)
+        public OrderImplementation(IConsumer<Null, string> consumer, OrderDbContext orderDbContext, ProductDbContext productDbContext, OrderSummaryDbContext orderSummaryDbContext)
         {
             this._consumer = consumer;
             this._orderDbContext = orderDbContext;
             this._productDbContext = productDbContext;
+            this._orderSummaryDbContext = orderSummaryDbContext;
         }
 
         public async Task StartConsumingServiceAsync()
@@ -52,8 +56,18 @@ namespace Order.API.OrderRespository
                                 {
                                     var product = productDto.ConvertProductDtoToProductExtension();
 
-                                    await this._productDbContext.Products.AddAsync(product);
-                                    await this._productDbContext.SaveChangesAsync();
+                                    OrderSummaryDto orderSummaryDto = new()
+                                    {
+                                        OrderId = product.Id,
+                                        ProductId = product.Id,
+                                        ProductName = product.Name,
+                                        ProductPrice = product.Price,
+                                    };
+
+                                    var orderSummary = orderSummaryDto.ConvertOrderSummaryDtoToOrderExtension();
+
+                                    await this._orderSummaryDbContext.OrderSummaries.AddAsync(orderSummary);
+                                    await this._orderSummaryDbContext.SaveChangesAsync();
                                 }
                                 break;
                             }
@@ -65,8 +79,18 @@ namespace Order.API.OrderRespository
                                 {
                                     var product = productDto.ConvertProductDtoToProductExtension();
 
-                                    this._productDbContext.Products.Update(product);
-                                    await this._productDbContext.SaveChangesAsync();
+                                    OrderSummaryDto orderSummaryDto = new()
+                                    {
+                                        OrderId = product.Id,
+                                        ProductId = product.Id,
+                                        ProductName = product.Name,
+                                        ProductPrice = product.Price,
+                                    };
+
+                                    var orderSummary = orderSummaryDto.ConvertOrderSummaryDtoToOrderExtension();
+
+                                    this._orderSummaryDbContext.OrderSummaries.Update(orderSummary);
+                                    await this._orderSummaryDbContext.SaveChangesAsync();
                                 }
                                 break;
                             }
@@ -78,8 +102,18 @@ namespace Order.API.OrderRespository
                                 {
                                     var product = productDto.ConvertProductDtoToProductExtension();
 
-                                    this._productDbContext.Products.Remove(product);
-                                    await this._productDbContext.SaveChangesAsync();
+                                    OrderSummaryDto orderSummaryDto = new()
+                                    {
+                                        OrderId = product.Id,
+                                        ProductId = product.Id,
+                                        ProductName = product.Name,
+                                        ProductPrice = product.Price,
+                                    };
+
+                                    var orderSummary = orderSummaryDto.ConvertOrderSummaryDtoToOrderExtension();
+
+                                    this._orderSummaryDbContext.OrderSummaries.Remove(orderSummary);
+                                    await this._orderSummaryDbContext.SaveChangesAsync();
                                 }
                                 break;
                             }
@@ -117,7 +151,7 @@ namespace Order.API.OrderRespository
                 Quantity = addOrderDto.Quantity
             };
 
-            var order = orderDto.ConvertOrderDtoToOrder();
+            var order = orderDto.ConvertOrderDtoToOrderExtension();
 
             var existingOrder = await this._orderDbContext.Orders.FirstOrDefaultAsync(order => order.Id == order.Id);
 
@@ -134,7 +168,7 @@ namespace Order.API.OrderRespository
             await this._orderDbContext.Orders.AddAsync(order);
             await this._orderDbContext.SaveChangesAsync();
 
-            var addedOrderInDatabaseDto = order.ConvertOrderToOrderDto();
+            var addedOrderInDatabaseDto = order.ConvertOrderToOrderDtoExtension();
 
             return new ResponseDto()
             {
@@ -146,11 +180,76 @@ namespace Order.API.OrderRespository
 
         public async Task<ResponseDto> GetOrderSummaryAsync()
         {
-            List<OrderSummary> orderSummaryDtos = new List<OrderSummary>();
+            IList<OrderSummaryDto> ordersSummaryDto = [];
+
+            IList<OrderDto> ordersDto = [];
+
+            var orders = await this._orderDbContext.Orders.ToListAsync();
+
+            if (orders is null)
+            {
+                ApplicationError applicationError = new()
+                {
+                    Id = new Guid(),
+                    When = DateTime.Now,
+                    Message = "Order is null!"
+                };
+
+                return new ResponseDto()
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = applicationError.Message
+                };
+            }
+
+            if (!orders.Any())
+            {
+                ApplicationError applicationError = new()
+                {
+                    Id = new Guid(),
+                    When = DateTime.Now,
+                    Message = "Currently, There are no orders!"
+                };
+
+                return new ResponseDto()
+                {
+                    Result = null,
+                    IsSuccess = false,
+                    Message = applicationError.Message
+                };
+            }
+
+            foreach (var order in orders)
+            {
+                var orderDto = order.ConvertOrderToOrderDtoExtension();
+                
+                ordersDto.Add(orderDto);
+
+                var productDetailInOrderPlaced = await this._productDbContext.Products.FirstOrDefaultAsync(product => product.Id == orderDto.ProductId);
+
+                var orderSummaryDto = new OrderSummaryDto()
+                {
+                    OrderId = orderDto.Id,
+                    ProductId = orderDto.ProductId,
+                    ProductName = productDetailInOrderPlaced?.Name ?? "Product not found",
+                    ProductPrice = productDetailInOrderPlaced.Price,
+                    OrderedQuantity = orderDto.Quantity
+                };
+
+                var orderSummary = orderSummaryDto.ConvertOrderSummaryDtoToOrderExtension();
+
+                await this._orderSummaryDbContext.OrderSummaries.AddAsync(orderSummary);
+                await this._orderSummaryDbContext.SaveChangesAsync();
+
+                var addedOrderSummaryDto = orderSummary.ConvertOrderSummaryToOrderSummaryDtoExtension();
+
+                ordersSummaryDto.Add(addedOrderSummaryDto);
+            }
 
             return new ResponseDto()
             {
-                Result = orderSummaryDtos,
+                Result = ordersSummaryDto,
                 IsSuccess = true,
                 Message = "Order summary fetched!"
             };

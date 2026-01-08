@@ -11,8 +11,6 @@ namespace ApplicationDataContext.DataBaseContext
 
         public DbSet<Order> Orders { get; set; }
 
-        public DbSet<OrderSummary> OrdersSummary { get; set; }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -25,16 +23,6 @@ namespace ApplicationDataContext.DataBaseContext
                 eachOrder.Property(order => order.ProductId).HasMaxLength(50);
 
                 eachOrder.Property(order => order.Quantity).HasPrecision(18, 2);
-            });
-
-            /* Configure OrderSummary entity */
-            modelBuilder.Entity<OrderSummary>(eachOrderSummary =>
-            {
-                eachOrderSummary.HasKey(orderSummary => orderSummary.OrderId);
-
-                eachOrderSummary.Property(orderSummary => orderSummary.ProductName).HasMaxLength(50);
-
-                eachOrderSummary.Property(orderSummary => orderSummary.TotalAmount).HasPrecision(18, 2);
             });
         }
     }

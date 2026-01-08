@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Shared.DTOs.OrderDtos
+namespace Shared.DTOs.OrderSummaryDtos
 {
-    public class OrderSummary
+    public class OrderSummaryDto
     {
         public int OrderId { get; set; }
 

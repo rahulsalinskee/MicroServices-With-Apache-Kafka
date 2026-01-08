@@ -10,8 +10,9 @@ namespace ApplicationDataContext.DataBaseContext
         {
             var currentDirectory = Directory.GetCurrentDirectory();
 
-            var basePath = Path.Combine(currentDirectory, "..", "Order.API");
+            var basePath = Path.Combine(currentDirectory, "..", "ApplicationDataContext");
 
+            /* Fallback logic: If we are not running from the solution root, try to find the file in the current dir. */
             if (!Directory.Exists(basePath))
             {
                 if (File.Exists(Path.Combine(currentDirectory, "appsettings.json")))
@@ -20,7 +21,8 @@ namespace ApplicationDataContext.DataBaseContext
                 }
                 else
                 {
-                    basePath = Path.Combine(currentDirectory, "Order.API");
+                    /* If we can't find the folder via "..", assume we might be at the solution root looking for the folder directly */
+                    basePath = Path.Combine(currentDirectory, "ApplicationDataContext");
                 }
             }
 

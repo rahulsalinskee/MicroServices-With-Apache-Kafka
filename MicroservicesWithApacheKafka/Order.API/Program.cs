@@ -29,6 +29,12 @@ try
         option.UseSqlServer(builder.Configuration.GetConnectionString(name: "OrderDbConnectionString"));
     });
 
+    /* Register order summary DbContext */
+    builder.Services.AddDbContext<OrderSummaryDbContext>(option =>
+    {
+        option.UseSqlServer(builder.Configuration.GetConnectionString(name: "OrderSummaryDbConnectionString"));
+    });
+
     /* Register the Product DbContext */
     builder.Services.AddDbContext<ProductDbContext>(options =>
     {
@@ -45,13 +51,12 @@ try
     /* Configure Kafka Consumer */
     var consumerConfig = new ConsumerConfig
     {
+        GroupId = "add-product-consumer-group",
+        AutoOffsetReset = AutoOffsetReset.Earliest,
         BootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
-        GroupId = "order-consumer-group",
-        AutoOffsetReset = AutoOffsetReset.Earliest
     };
     builder.Services.AddSingleton<IConsumer<Null, string>>(sp => new ConsumerBuilder<Null, string>(consumerConfig).Build());
 
-    builder.Services.AddScoped<IOrderService, OrderImplementation>();
     builder.Services.AddScoped<IOrderService, OrderImplementation>();
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();

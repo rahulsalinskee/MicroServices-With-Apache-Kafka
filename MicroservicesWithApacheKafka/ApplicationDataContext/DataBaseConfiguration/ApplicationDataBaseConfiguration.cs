@@ -14,9 +14,7 @@ namespace ApplicationDataContext.DataBaseConfiguration
         {
             var assembly = Assembly.GetExecutingAssembly();
 
-            var resourceName = RESOURCE_NAME;
-
-            using var manifestResourceStream = assembly.GetManifestResourceStream(name: resourceName);
+            using var manifestResourceStream = assembly.GetManifestResourceStream(name: RESOURCE_NAME);
 
             if (manifestResourceStream is not null)
             {
