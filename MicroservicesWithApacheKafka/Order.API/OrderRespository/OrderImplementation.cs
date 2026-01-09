@@ -8,7 +8,6 @@ using Shared.DTOs.ProductDtos;
 using Shared.Mapper;
 using Shared.Models;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Order.API.OrderRespository
 {

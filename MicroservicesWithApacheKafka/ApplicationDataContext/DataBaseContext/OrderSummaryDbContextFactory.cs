@@ -1,61 +1,4 @@
-﻿//using Microsoft.EntityFrameworkCore;
-//using Microsoft.EntityFrameworkCore.Design;
-//using Microsoft.Extensions.Configuration;
-
-//namespace ApplicationDataContext.DataBaseContext
-//{
-//    public class OrderSummaryDbContextFactory : IDesignTimeDbContextFactory<OrderSummaryDbContext>
-//    {
-//        public OrderSummaryDbContext CreateDbContext(string[] args)
-//        {
-//            var currentDirectory = Directory.GetCurrentDirectory();
-
-//            var basePath = Path.Combine(currentDirectory, "..", "Order.API");
-
-//            if (!Directory.Exists(basePath))
-//            {
-//                if (File.Exists(Path.Combine(currentDirectory, "appsettings.json")))
-//                {
-//                    basePath = currentDirectory;
-//                }
-//                else
-//                {
-//                    basePath = Path.Combine(currentDirectory, "Order.API");
-//                }
-//            }
-
-//            Console.WriteLine($"[Factory] Looking for appsettings.json in: {Path.GetFullPath(basePath)}");
-
-//            /* 1. Build the configuration to read appsettings.json. 
-//            *  We point to the Order.API project path to find the correct connection string 
-//            */
-//            var configuration = new ConfigurationBuilder().SetBasePath(Path.GetFullPath(basePath)).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).Build();
-
-//            /* 2. Create the options builder */
-//            var optionsBuilder = new DbContextOptionsBuilder<OrderSummaryDbContext>();
-
-//            /* 3. Get the connection string. 
-//            *  MAKE SURE this key "OrderDbConnectionString" matches your appsettings.json exactly.
-//            */
-//            var connectionString = configuration.GetConnectionString("OrderSummaryDbConnectionString");
-
-//            /* 4. Validate the connection string */
-//            if (string.IsNullOrEmpty(connectionString))
-//            {
-//                throw new InvalidOperationException($"Connection string 'OrderSummaryDbConnectionString' not found in {Path.Combine(basePath, "appsettings.json")}.");
-//            }
-
-//            /* 5. Add the connection string to the options builder */
-//            optionsBuilder.UseSqlServer(connectionString);
-
-//            /* 6. Create and return the DbContext */
-//            return new OrderSummaryDbContext(optionsBuilder.Options);
-//        }
-//    }
-//}
-
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
@@ -92,10 +35,7 @@ namespace ApplicationDataContext.DataBaseContext
 
             Console.WriteLine($"[Factory] Looking for appsettings.json in: {Path.GetFullPath(basePath)}");
 
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Path.GetFullPath(basePath))
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
+            var configuration = new ConfigurationBuilder().SetBasePath(Path.GetFullPath(basePath)).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).Build();
 
             var optionsBuilder = new DbContextOptionsBuilder<OrderSummaryDbContext>();
 
